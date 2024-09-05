@@ -103,9 +103,9 @@ datasaurus_dozen %>%
 Term | Definition
 -----|-----------
 Supervised learning | The data is labeled
-Unsupervised learning | The data is *not* labeled
+Unsupervised learning | The data is *not* labeled (looking for structure within data)
 Classification | Predicting a categorical/discrete variable
-Regression |  Predicting a continuous variable
+Regression |  Predicting a continuous variable (numerical and linear)
 
 Which model to use?
 
@@ -123,6 +123,7 @@ For our purposes, we will focus on supervised learning and will be implementing 
 ![datatypes](./images/count-variables-vs-continuous-variables.png)
 
 [imglink](https://statcalculators.com/count-variables-vs-continuous-variables-understanding-the-differences/)
+#Ordinal is in order, but scale between items in order might be different
 
 # Let's begin!   
 We will go through an example dataset which contains various passenger information for the titanic and talk about how to recognize and clean the dataset correctly.
@@ -195,6 +196,7 @@ df %>%
 Can someone help me interpret our output?
 
 - What do we see?
+Spike at age 18
 
 #### Ans:
 ```{r}
@@ -202,6 +204,7 @@ Can someone help me interpret our output?
 ```
 
 - What category does most of our missing data fall into?
+Late teens/early 20's
 
 #### Ans:
 ```{r}
@@ -209,6 +212,7 @@ Can someone help me interpret our output?
 ```
 
 - What do we *not* see? (opinion)
+Drop at age 16
 
 #### Ans:
 ```{r}

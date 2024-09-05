@@ -1,0 +1,214 @@
+---
+title: "UTSW Nanocourse - Data Science in R : Fundamentals Exercise"
+author: "Austin Marckx"
+date: "2024-09-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ggpubr)
+library(rstatix)
+library(datasauRus)
+library(GGally)
+library(titanic)
+library(randomForest)
+library(caret)
+library(MASS)
+library(car)
+library(tidyverse)
+set.seed(1234)
+
+# Use set dplyr fxns as priority for conflicts
+library(conflicted)
+conflict_prefer("select", "dplyr")
+conflict_prefer("filter", "dplyr")
+```
+
+# Section 1 : File I/O
+
+## Ex 1.1: Load mtcars from the datasets module in R
+
+Ensure the dataset is saved as a tibble
+
+```{r}
+# Load the library with the datasets
+library(datasets)
+#mtcars1 <- mtcars
+
+# assign the mtcars dataset to variable in active environment
+mtcars1 <-tibble(datasets::mtcars)
+
+# print dataset to console
+print(mtcars1)
+```
+
+
+## Ex 1.2: Correctly load mtcars from the file path provided:
+
+```{r}
+# DO NOT CHANGE: This is the relative file path to the dataset.
+mtcars_filepath_ex1pt2 <- "data/cars.tsv"
+
+# Load the dataset from the file; 
+mtcars2 <- read_tsv(mtcars_filepath_ex1pt2)
+mtcars2
+
+```
+
+## Ex 1.3: Correctly load mtcars from a filepath with atypical structure
+```{r}
+# DO NOT CHANGE: This is the relative file path to the dataset.
+mtcars_filepath_ex1pt3 <- "data/cars_ex1pt3.tsv"
+
+# Load the dataset from the file; 
+mtcars3 <- read_tsv(mtcars_filepath_ex1pt3)
+mtcars3
+```
+
+# Section 2: Knowing your data
+
+```{r}
+# The data is loaded into the environment for you
+knowingYourData_Filepath <- "data/kyd.csv"
+cars <- read_csv(knowingYourData_Filepath)
+```
+
+
+meta-data: A data frame with 32 observations on 6 variables.
+
+| Column Index| Name |  Description | 
+|-------------|------|--------------|
+|[, 1] | mpg |	Miles/(US) gallon
+|[, 2]|	cyl	|Number of cylinders
+|[, 3]|	wt	|Weight (1000 lbs)
+|[, 4]|	qsec	|1/4 mile time
+|[, 5]|	am	| Transmission (0 = automatic, 1 = manual)
+|[, 6]|	gear	|Number of forward gears
+|[, 7]| rec   |Public vehicle recall : TRUE = Vehicle recalled o/w Not recalled
+
+
+## Ex 2.1: First steps with new dataset 
+
+```{r}
+# Look at the head of the dataset
+cars %>% head()
+
+# Print the summary statistics
+cars %>% summary()
+
+# Check for missing values:
+print(any(is.na(cars)))
+
+# Extract rows with missing values
+cars[!complete.cases(cars),]
+
+
+```
+
+## Ex 2.2: Describe the missing in `cars`, can you use the meta-data to make sure there are no missing values?
+
+```{r}
+# Fix Missing Data:
+cars$rec <- ifelse(is.na(cars$rec), FALSE, TRUE)
+```
+## Ex 2.3: Column Structure and Datatypes
+
+```{r}
+# 1) Look at the structure:
+cars %>% str() 
+
+# 2) Transform the datatype of each column to what you think it should be based on the provided meta-data
+cars <- cars%>% transform(
+  cyl= as.factor(cyl),
+  am = as.factor(am),
+  gear = as.factor(gear)
+)
+
+```
+
+## Ex 2.4: Exploratory Plotting
+
+```{r, warning= FALSE, message = FALSE, fig.height = 9, fig.width = 9}
+# Make a pairs plot and color it by the number of gears 
+cars%>%
+  ggpairs(aes(color=gear), progress = FALSE)
+```
+
+Can you identify any trends data?
+
+
+
+# Section 3: Essentials of Data Wrangling
+
+## Ex 3.1 Arranging, Selecting, and Dropping columns
+```{r}
+# From the dataset in section 2: 
+# 1) rearrange the columns such that the gear comes first
+
+# 2) drop the recall column 
+
+# 3) save this in a variable called "newcars"
+newcars <- cars%>% dplyr::select(gear, everything(), -rec) 
+newcars
+
+# Add in a new column `id` which assigns a unique number to each row
+## HINT: This column will be important later
+newcars <- newcars%>% mutate(id= row_number()) %>% dplyr::select(id, everything())
+newcars
+
+```
+
+
+## Ex 3.2 : Filtering & subsetting rows
+
+```{r}
+# Filter the `newcars` to only include rows which whose cylinder value equal to the highest number of cylinders in the dataset. Save this variable as: `filtered_newcars`
+filtered_newcars <- newcars%>% filter(cyl %in% max(as.numeric(levels(cyl))))
+filtered_newcars
+
+```
+ 
+## Ex 3.3 : Group by, summarize, and mutate
+ 
+```{r}
+# Make a character vector with strings containing your two favorite colors
+colors <- c("black", "blue")
+
+# create a new column which randomly assigns one of the colors to each car in `filtered_newcars`
+filtered_newcars<- filtered_newcars%>%
+  mutate(paint= sample(colors, nrow(filtered_newcars),replace=TRUE))%>%
+  transform(paint = as.factor(paint))
+filtered_newcars
+
+# Summarize the average weight for each color of car. Ensure this value is in lbs and round it to 2 decimal places. 
+filtered_newcars%>%
+  group_by(paint)%>%
+  summarize(avg_color_wt= round(mean(wt*1000), 2))
+
+
+```
+
+## Ex 3.4 : Dataset Joins
+
+```{r}
+# Save a subset of `filtered_newcars` containing only the `id` and `paint` columns
+cars_subset <- filtered_newcars %>% dplyr::select(id, paint)
+cars_subset
+
+# Now perform a left join with between `newcars` and `cars_subset`
+cars_leftjoin <- newcars %>% left_join(cars_subset, by = 'id')
+cars_leftjoin
+```
+
+## Ex 3.5 : More Dataset Joins
+```{r}
+# Save a subset of `filtered_newcars` containing only `id`, `paint`, and `cyl` columns
+cars_subset <- filtered_newcars%>% dplyr::select(id, cyl, paint)
+cars_subset
+# Now perform a left join with between `newcars` and `cars_subset`
+cars_leftjoin <- newcars%>% inner_join(cars_subset, by= c('id', 'cyl'))
+
+# Validate that the inner_join dataset is equivalent to `filtered_newcars`
+# Understanding when you can break up your data into smaller pieces is essential when working with large datasets
+
+```

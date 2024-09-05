@@ -1,0 +1,674 @@
+---
+title: "UTSW Nanocourse - Data Science in R : Fundamentals"
+author: "Austin Marckx"
+date: "2024-09-05"
+output: 
+  html_document:
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+library(datasets)
+library(ggpubr)
+library(rstatix)
+library(datasauRus)
+library(GGally)
+library(titanic)
+library(randomForest)
+library(caret)
+library(tidyverse)
+library(cowplot)
+library(data.table)
+set.seed(1234)
+
+# Use set dplyr fxns as priority for conflicts
+library(conflicted)
+conflict_prefer("select", "dplyr")
+conflict_prefer("filter", "dplyr")
+
+
+efp <- "data/evil.csv"
+```
+
+
+# Introduction: Fundamentals of Data science in R
+
+- Section 1: File I/O
+- Section 2: Getting to know your data
+- Section 3: Essential tools of data wrangling
+
+# Basic file I/O
+
+Some base datasets (https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/00Index.html) are included in R. These can be loaded into the active environment like so:
+
+```{r}
+# We will begin with perhaps the most iconic dataset in R... Iris!
+df <- tibble(datasets::iris)
+df %>% head()
+```
+
+
+Let's say we want to save this data to a file. For tabular data, .csv (comma separated variable) files are very common. Let's save the iris dataset to a file in our current working directory directory
+
+> Note: the relative file path from present working directory is sufficient.
+
+```{r}
+myFileName = "iris.csv"
+df %>% write_csv(myFileName)
+print(list.files("."))
+```
+
+Now let's read the iris data back in from the file we just saved
+
+```{r}
+irisFromFile_readcsv  <- read_csv(myFileName, show_col_types = FALSE)
+irisFromFile_readcsv
+
+# note this is exactly the same data as we loaded from the iris dataset:
+# I'm only going to print the top of the dataset, but you can easily remove the "%>% head()" calls and do
+# element-wise comparisons for the whole dataset
+print("Dataset Iris == File Iris?")
+print(df %>% head() == irisFromFile_readcsv %>% head())
+```
+
+What if you have a list of files you want to read into the same table?
+
+```{r}
+tst_df <- read_delim(c("data/iris_setosa.csv", "data/iris_vericolor.csv", "data/iris_virginica.csv"), delim = ",", show_col_types = FALSE)
+tst_df
+
+```
+
+What does it look like when you do it wrong? (Warning flags)
+
+```{r}
+semicolon_iris <- "data/semicoloniris.csv"
+
+#df %>% write_delim(semicolon_iris, delim = ";")
+wrong_delim_df <- read_csv(semicolon_iris, show_col_types = FALSE)
+wrong_delim_df %>% head()
+```
+
+As you can see above, there is only one column and it contains all the variables, let's correctly read in the file:
+
+```{r}
+correct_delim_df <- read_delim(semicolon_iris, ";", show_col_types = FALSE)
+correct_delim_df %>% head()
+```
+
+What about when you have dataset information at the top of your dataset?
+
+```{r}
+skiprows_iris <- "data/skiprowsiris.csv"
+wrong_rowstart_iris <- read_delim(skiprows_iris, ";", show_col_types = FALSE)
+wrong_rowstart_iris %>% head()
+```
+
+We used the correct delimiter but sometimes that's not enough!
+Let's tell the function to skip the first two rows which only contain meta-data
+
+```{r}
+correct_rowstart_iris <- read_delim(skiprows_iris, ";", skip = 2, show_col_types = FALSE)
+correct_rowstart_iris %>% head()
+```
+
+Much better! But now I'm going to be evil! >:)
+
+```{r}
+evil_filepath <- "data/evil.csv"
+evil_df <- read_delim(evil_filepath, ";", show_col_types = FALSE)
+evil_df %>% head()
+```
+
+> Can anybody tell me what happened to this dataset?
+
+#### Ans:
+```{r class.source = 'fold-hide'}
+# The cell at [A,1 contains the column names, the column B[1:150] contains the data values!
+```
+
+> How do we fix it? "there is more than one way to skin a cat
+
+#### Ans: One way 
+```{r class.source = 'fold-hide'}
+r1 <- read_delim(efp, n_max = 1, col_names = FALSE, show_col_types = FALSE)
+cn <- r1$X1 %>% str_split(";")%>% unlist()
+re <- r1$X2 %>% str_split(";")%>% unlist()
+d <- read_delim(efp, delim = ";", skip = 1, col_names = FALSE, show_col_types = FALSE)
+d$X1 <- d$X1 %>% str_remove(",")
+d <- d %>% setnames(old = d %>% colnames(), new = cn ) %>% rbind(re) %>% slice(n(),1:n()-1) %>% transform( Sepal.Length = as.double(Sepal.Length), Sepal.Width = as.double(Sepal.Width),  Petal.Length = as.double(Petal.Length),Petal.Width = as.double(Petal.Width),  Species = as.factor(Species)) 
+print(any(d != df))
+```
+
+#### Ans: The Better Way 
+```{r class.source = 'fold-hide'}
+# Read in the first row of values, select the first column of names and the first row of values, split them by the delim
+evil_firstRow <- read_delim(evil_filepath, n_max = 1, col_names = FALSE, show_col_types = FALSE)
+evilColnames <- evil_firstRow$X1 %>% str_split(";")%>% unlist()
+evilFirstEntry <- evil_firstRow$X2 %>% str_split(";")%>% unlist()
+
+# Sanity check
+print(evilColnames)
+print(evilFirstEntry)
+
+# Get all the data in from all except the first row using standard read_delim
+# Column names are separately stored above.
+notevil_df <- read_delim(evil_filepath, delim = ";", skip = 1, col_names = FALSE, show_col_types = FALSE)
+notevil_df
+
+# note, b/c of the csv extension and the lack of data in the first column, 
+# there is an inferred comma added to X1 values; Remove it
+notevil_df$X1 <- notevil_df$X1 %>% str_remove(",")
+notevil_df
+
+# Correct column names
+notevil_df %>% data.table::setnames(old = notevil_df %>% colnames(), new = evilColnames )
+notevil_df
+
+# Add in that first row we stored earlier
+# Bind the row to the end, then move it to the top
+# output should be element wise identical to `df`
+notevil_df <- notevil_df %>% rbind(evilFirstEntry) %>% slice(n(),1:n()-1)
+notevil_df
+
+# Change column types
+notevil_df <- notevil_df %>% transform( 
+            Sepal.Length = as.double(Sepal.Length),
+            Sepal.Width = as.double(Sepal.Width),
+            Petal.Length = as.double(Petal.Length),
+            Petal.Width = as.double(Petal.Width),
+            Species = as.factor(Species)
+            ) 
+notevil_df %>% head()
+
+# Sanity check, like the original?
+print(any(notevil_df != df))
+```
+
+I am trying to illustrate how a really simple task: moving all the data in the second column into columns whose names are stored in the first column/row can turn into a huge mess!! 
+
+What things about answer two make it better? (even if the code is EXACTLY the same)
+
+- COMMENTS!!!
+- Meaningful variable names!
+
+Highly, highly, highly recommend you force yourself to make both of these things a habit, because they will save you time and pain in the future. Debugging code (including your own) is MUCH easier when you leave notes about what you are trying to do. This is *fundamental* to being a data scientist.
+
+#### Ans: Other way (Easiest / most dangerous)
+```{r class.source = 'fold-hide'}
+####  Raw data file mods (CAUTION)
+# You could just open the csv file in excel and move the data back to the correct position!
+# If the data is tabular, you should almost always have the space necessary to save a copy!! don't ever overwrite your raw data!!!
+# Nevertheless, part of being a data scientist is knowing when to use R, not just brute forcing it because you can.
+```
+
+Common considerations for File I/O:
+
+- what is the file type?
+  - csv?
+  - xlsx?
+  - json?
+  
+Although I will not go into detail about excel/json files, the principles are very similar to the ones above.
+
+- Is there and what is the entry separator (deliminator)?
+  - comma
+  - semi-colon
+  - tab
+- Do you need to skip lines?
+- Is there a header/column name in the file?
+
+
+# Section 2: Knowing your data
+
+## Data types and structures
+  
+Data Types:
+
+  - character
+  - numeric (real or decimal)
+  - integer
+  - logical
+  - complex
+  - POSIXct (Number of seconds since Jan 1, 1970 -- time variables)
+
+These are pretty standard across programming languages and I'm not going to spend much time discussing them. However, you should know what data type you expect for your raw data. However, if your time values are stored as characters, that's something you will want to fix for subsequent data manipulations.
+
+Data Structures:
+
+ - vector
+ - list
+ - matrix
+ - data frame
+ - **factors**
+ - **tibbles**
+ 
+You should know at least what the above are, but for our purposes we will focus on the bottom two (which are by far my favorite structures in R). We will use them A LOT.
+
+## Load data / Cursory Examination
+```{r class.source = 'fold-show'}
+# Load data
+df <- titanic_train %>% as_tibble()
+
+# Data structure
+df %>% str()     # Personally I prefer this one esp. because it has the size of each column
+df %>% glimpse()
+
+# Top and bottom values
+df %>% head(4)
+df %>% tail(6)
+
+# Summary Stats
+df %>% summary()
+df %>% rstatix::get_summary_stats()
+
+# Check for missing values
+print(any(is.na(df)))
+
+# Extract rows with missing values
+df[!complete.cases(df),]
+```
+
+Feature  |	Description	| Key
+---------|--------------|--------
+survival | Survival	    |0 = No, 1 = Yes
+pclass	 | Ticket class	|1 = 1st, 2 = 2nd, 3 = 3rd
+sex	     | Sex          |	
+Age	     | Age in years	|
+sibsp    | # of siblings / spouses aboard the Titanic |	
+parch	   | # of parents / children aboard the Titanic	|
+ticket	 | Ticket number|	
+fare	   |Passenger fare|	
+cabin    | Cabin number	|
+embarked |Port of Embarkation|	C = Cherbourg, Q = Queenstown, S = Southampton
+
+
+## Pairplot
+
+This will likely be your bread and butter for dataset cleaning. It gives you a number of plots which may seem daunting, but we'll walk through how to interpret it.
+
+```{r, fig.height=18, fig.width=18}
+df %>% 
+  select(-Name, -Ticket, -Cabin) %>% # drop highly unique categorical columns 
+  ggpairs(aes(color = Sex), progress = FALSE) 
+
+```
+
+First glance at this plot:
+
+**Lower triangle:**
+
+> If both variables are numerical, then a scatterplot is drawn
+
+> If one variable is numerical and one is categorical, histogram is drawn
+
+>If both are categorical, then a faceted bargraph is drawn
+
+**Diagonal:** 
+
+> If the variable is numerical: a density plot is drawn
+
+> If the variable is categorical: a bargraph is drawn
+
+**Upper Triangle:**
+
+> If Both variables are numerical, the correlation (along with significance level) is printed
+
+> If One variable is numerical and one is categorical, a boxplot is drawn
+
+> If Both variables are categorical, a barplot is drawn (where size~count is important)
+
+**Messages/Warnings:** R displays a number of messages and warnings when appropriate. 
+
+> Here we have a *message* that our density plots are using 30 bins (the default).  While you can change this value to perhaps get a better representation of your data, this shouldn't be cause for too much concern.
+
+> We also receive a *warning* that 177 rows containing missing values are removed.  This is **VERY** important to remember because missing values will not show up in your plots and therefore may skew your interpretation of your data! Because we already know that age contains almost all the missing values, I will suppress these warnings for the sake of readability, but you should be aware of when data is omitted!
+
+
+## Validate your features (column level)
+
+Make sure all your data features have the correct typing and check for duplicate features/linear transformations of feature. We know from our legend that some of our "numerical" variables are actually categorical.  How can we identify that from our plot?
+
+- Look for scatter plots which are are too grid-like or composed of only horizontal/vertical lines.
+
+Pclass -- Look down the X-axis, all values are either 1, 2, or 3.
+
+Survived -- Similar to Pclass, values of only 0, 1
+
+- Although not present in this dataset, duplicate features may show as identical data in two different columns.  It is often very obvious because the two columns are very highly correlated with one another.
+
+Let's quickly apply those changes to the dataset:
+
+```{r, fig.height=18, fig.width=18, warning=FALSE, message = FALSE}
+# Transform features to be correct types
+df <- transform(df, 
+                  Survived = as.factor(Survived),
+                  SES = as.factor(Pclass),          # I prefer to think of in terms of SES rather than Pclass so I'll rename this column
+                  # Character featuers are treated as factors, but I want to explicitly declare these as factors
+                  Sex = as.factor(Sex),
+                  Embarked = as.factor(Embarked)
+                  ) %>% select(PassengerId, Survived, SES, everything(), -Pclass)
+
+df %>% 
+  select(PassengerId, Age, Fare, SibSp, Parch, everything(), -Name, -Ticket, -Cabin) %>% # drop highly unique categorical columns 
+  ggpairs(aes(color = Sex), progress = FALSE) 
+
+```
+
+What about Parch/SibSp how should we treat these variables?
+
+- These are both discrete numerical variables (i.e. counts)
+
+This is a tricky question and there are multiple valid answers.
+
+1) We can leave the data as is. Perhaps the exact number of siblings/spouses is highly informative
+
+2) We can **Bin** the data into categorical groups such as "0 siblings/spouse" and "1+ sibling/spouse"
+
+3) If we had the full dataset, we could **Split** the counts of siblings/spouses into two different features (i.e. # siblings and # spouses)
+  - A really good example of when splitting is appropriate is with dates (i.e. splitting year-month-day into individual features)
+
+For the sake of argument, here I will choose to **Bin** the SibSp and Parch features
+
+```{r}
+df$SibSpBin <- factor(ifelse(df$SibSp == 0, 0, 1))
+df %>% str()
+
+```
+
+## Corr Plot
+
+This plot is another way to see if any features are very highly correlated with one another.
+
+```{r, fig.height=12, fig.width=12}
+df %>% 
+  select(-Name, -Ticket, -Cabin) %>% # drop highly unique categorical columns 
+  ggcorr(method = c("everything", "pearson"))
+
+```
+
+
+# Section 3: Essential Tools of Data Wrangling
+``` {r}
+# Let's load a dataset into our environment, and use what we learned above to get an idea of 
+df <- tibble(datasets::iris)
+df %>% head()
+df %>% summary()
+df %>% str()
+print(any(is.na(df)))
+```
+- The column types appear to be appropriate for the information they contain.
+- There don't appear to be any missing values
+Seems like the data is ready for subsequent analysis!
+
+What happens when that isn't the case?
+```{r}
+# Add spurious column / row values to iris
+df$isAnimal = FALSE
+levels(df$Species) <- c(levels(df$Species),"Duck-billed Platypus") 
+duckbilledplatypus <- list(
+                        rnorm(50, mean = 0.0, sd = 0.00), # Sepal.Length
+                        rnorm(50, mean = 0.0, sd = 0.00), # Sepal.Width
+                        rnorm(50, mean = 0.0, sd = 0.00), # Petal.Length
+                        rnorm(50, mean = 0.0, sd = 0.00), # Petal.Width
+                        rep("Duck-billed Platypus", 50),
+                        rep(TRUE, 50)
+                        )
+df <- df %>% rbind(duckbilledplatypus)
+```
+
+## Select / filter
+
+```{r}
+# look at dataset
+df %>% head()
+df %>% summary()
+df %>% str()
+print(any(is.na(df)))
+
+# Example plot: 
+df %>% 
+  ggplot(aes(x = Sepal.Width, y = Sepal.Length, color = Species)) + 
+    geom_point() +
+    theme_minimal()
+
+```
+
+Looks like there aren't any missing values and the columns are the appropriate typing! However a duck-billed platypus has snuck into our flowers dataset! Let's extricate it!
+
+```{r}
+# looking at the dataset, there are a couple of ways we can remove the rows which contain the duck-Billed Platypus:
+df %>% filter(Species != "Duck-billed Platypus")
+#df %>% filter(isAnimal == FALSE)
+#df %>% filter(isAnimal != TRUE)
+#df %>% filter(Species %in% c('setosa', 'virginica', 'versicolor'))
+```
+
+```{r}
+# Note that we didn't overwrite the underlying tibble by applying this filter!
+df %>% head()
+
+# This still contails all the platypus.  This is very powerful, meaning you can use filter to temporarily filter your dataset for, say plotting!
+df %>% 
+  filter(isAnimal == FALSE) %>% 
+  ggplot(aes(x = Sepal.Width, y = Sepal.Length, color = Species)) + 
+    geom_point() +
+    theme_minimal()
+
+```
+
+Much better! 
+
+If we want to save our changes, we can overwrite the original df like so:
+```{r}
+# pre-filter overview
+df %>% str()
+# Only include rows which are not animals
+df <- df %>% filter(isAnimal == FALSE)
+# post-filter overview 
+df %>% str()
+
+```
+
+Note how the count of values in the duck-billed platypus level is now 0.
+
+Now let's decrease the clutter of the dataset. Because all the values in the "isAnimal" column are the same, it doesn't really add any value for us.  Let's remove this column
+
+```{r}
+df %>% select(-isAnimal) %>% head()
+# Again, if we want to save the changes, we will have to overwrite the orignial dataframe
+df <- df %>% select(-isAnimal)
+df %>% head()
+```
+
+```{r}
+# We can reorder the columns like so:
+df %>% head()
+df <- df %>% select(Species, everything())
+df %>% head()
+```
+
+## Changing columns
+
+```{r}
+# Pre-mutate
+df %>% head()
+# Temp flowerID
+df %>% mutate(flowerID = row_number()) 
+# Post-mutate
+df %>% head()
+# alternatively you can manually specify the column name and overwrite the df
+df$flowerID <- df$Species %>% row_number()
+df %>% head()
+```
+```{r}
+# Temp factor
+df %>% transform(flowerID = as_factor(flowerID)) %>% head()
+# Save the factor
+df$flowerID <- as_factor(df$flowerID)
+df %>% head()
+```
+
+## group_by / summarize
+
+what if we want to know the mean of each species, without overwriting the dataset?
+
+```{r}
+# Group values 
+df %>% 
+  group_by(Species) %>%
+  summarize(mean(Sepal.Length))
+  
+```
+
+
+## pivot_longer / pivot_wider 
+
+```{r}
+# subset the data
+df_se <- df %>% filter(Species == "setosa")
+
+df_se <- df_se %>% 
+  select(Sepal.Length) %>% 
+  # Sample random normal dist for amount of sepal length reduction in winter.
+  mutate(Winter.Sepal.Length = Sepal.Length - rnorm(n(), mean = 0.2, sd = 0.05)) %>% 
+  # Arbitrarily Assign season to original data values
+  rename( Summer.Sepal.Length = Sepal.Length ) %>%
+  # Add in UID for grouping
+  mutate(flowerID = as_factor(row_number()))
+
+df_se %>% head()
+```
+
+This is an example of un-tidy data! Why should you care?
+
+Let's consider what would happen if we wanted to plot the distribution of sepal length values:
+
+```{r}
+# density plot of summer sepal length
+df_se %>% 
+  ggplot(aes(x = Summer.Sepal.Length)) +
+    geom_density(alpha = 0.7) + 
+    theme_minimal()
+```
+
+Density plots only take 1 column of x values, so it makes it quite difficult to compare between the seasons!
+
+Let's try tidy data format:
+```{r}
+tidy_df_se <- df_se %>% 
+  pivot_longer(cols = -c(flowerID), names_to = 'season', values_to = 'Sepal.Length') %>%
+  # Clean up the season names
+  mutate(season = case_when(season == 'Summer.Sepal.Length' ~ 'summer', 
+                            season == 'Winter.Sepal.Length' ~ 'winter')) %>%
+  # Turn into factor
+  transform(season = as_factor(season))
+
+tidy_df_se %>% head()
+
+```
+
+
+```{r}
+# density plot of sepal length colored by season
+tidy_df_se %>% 
+  ggplot(aes(x = Sepal.Length, fill = season)) +
+    geom_density(alpha = 0.7) + 
+    theme_minimal()
+```
+
+
+```{r}
+# Randomly select half of the flowerIDs
+mountainFlowers <- sample(nrow(df_se) , nrow(df_se) %/% 2)
+
+# Create dataset with combined season_location column in wide format
+wide_df_se <- df_se %>% 
+  pivot_longer(cols = -c(flowerID), names_to = 'season', values_to = 'Sepal.Length') %>%
+  # Assign selected flowers to be "mountain" rest to be "valley" along with season names.
+  mutate(season = case_when(
+    season == 'Summer.Sepal.Length' & flowerID %in% mountainFlowers ~ 'summer_mountain', 
+    season == 'Summer.Sepal.Length' & !(flowerID %in% mountainFlowers) ~ 'summer_valley', 
+    season == 'Winter.Sepal.Length' & flowerID %in% mountainFlowers ~ 'winter_mountain',  
+    season == 'Winter.Sepal.Length' & !(flowerID %in% mountainFlowers) ~ 'winter_valley' )) %>% 
+  # pivot wider as example
+  pivot_wider(names_from = season, values_from = Sepal.Length)
+```
+
+
+## Separate / Unite
+
+```{r}
+# save these results for subsequent join)
+joindf <- wide_df_se %>% 
+  # Take the wide dataset and make it long
+  pivot_longer(cols = c(-flowerID), names_to = "season_loc", values_to = "Sepal.Length") %>% 
+  # Drop rows with missing values 
+  drop_na() %>%
+  # Separate the season_loc column into 2 separate columns
+  separate(col = season_loc, into = c('season', 'loc'), sep = "_") %>% 
+  # Fix the datatypes
+  transform(season = as_factor(season), loc = as_factor(loc)) %>%
+  # Add uid column for joins
+  mutate(uid = row_number())
+
+joindf %>% head()
+```
+
+Unite has similar syntax, but does the opposite of separate.
+
+## Joining two datasets : 
+
+[Image link](https://r4ds.had.co.nz/relational-data.html)
+
+![Join Venn Diagram](./images/join-venn.png)
+
+
+```{r}
+# subset joindf to emulate data from 2 files
+measurements_df_se <- joindf %>% select(uid, flowerID, Sepal.Length) %>% arrange(Sepal.Length)
+details_df_se <- joindf %>% select(-Sepal.Length)
+
+# randomly remove some values for inner join example
+missing_uid <- sample(nrow(df_se) , nrow(df_se) %/% 9)
+missing_df_se <- measurements_df_se %>% 
+  mutate(uid = ifelse(uid %in% missing_uid, NA, uid), flowerID = ifelse(uid %in% missing_uid, NA, flowerID)) %>%
+  drop_na() %>% 
+  transform(flowerID = as.factor(flowerID))
+    
+measurements_df_se %>% head()
+details_df_se %>% head()
+missing_df_se %>% head()
+```
+
+Combining data from 2 files with left join:
+
+```{r}
+details_df_se %>%
+  left_join(measurements_df_se, by = c("uid", "flowerID")) %>% 
+  select(uid, flowerID, season, loc, everything()) %>% 
+  arrange(flowerID) %>% head()
+
+```
+
+
+```{r}
+# Use inner join to get join values with UID - note only those values that do not have missing UIDs are returned
+details_df_se %>%
+  inner_join(missing_df_se, by = c("uid", "flowerID")) %>% 
+  select(uid, flowerID, season, loc, everything()) %>% 
+  arrange(flowerID)  %>% head()
+
+```
+
+# Congrats!! You've taken your first steps as an R data scientist!
+
+# Other resources
+
+- R For Data Science Hadley Wickham: https://r4ds.had.co.nz/index.html
+- The Epidemiologist R Handbook: https://epirhandbook.com/en/index.html
+
+# Session info:
+```{r}
+sessionInfo()
+```

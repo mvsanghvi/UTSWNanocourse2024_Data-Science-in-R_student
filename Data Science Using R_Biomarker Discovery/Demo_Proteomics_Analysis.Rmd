@@ -1,0 +1,477 @@
+---
+title: "Demo: Proteomics Data Analysis"
+output: 
+  html_document: default
+---
+by Jeon Lee 
+
+$~$
+
+
+#### Environment set-up and data import
+```{r message=FALSE, warning=FALSE}
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(reshape2)
+library(data.table)
+library(MetaboDiff)
+
+library(limma)
+library(ggfortify)
+library(ggrepel)
+library(edgeR)
+
+#setwd("~/BICF Nanocourse/Data Science Using R_Sep2024")
+
+sample_info <- read.table("Sample_info.txt", sep="\t", header=T)
+rownames(sample_info) <- paste("sample", c(1:dim(sample_info)[1]), sep="")
+sample_info$TimePoint[sample_info$TimePoint==""] <- "Unavailable"
+  
+Data <- read.table("Proteomics_Demo_Data.txt", quote="", sep="\t", header=T, fill=T)
+#Data <- Data[c(1:1092),] # remove proteins that were identified with only 1 PSM [c(1093:1161),]
+#                        # proteins that were identified but not quantified [c(1162:1700),]
+#                        # some potential contaminants [c(1701:1725),]
+
+protein_info <- Data[,c(1:10)]
+rownames(protein_info) <- paste("protein", c(1:dim(protein_info)[1]), sep="")
+
+pData <- Data[,c(11:90)]
+rownames(pData) <- rownames(protein_info)
+colnames(pData) <- rownames(sample_info)
+
+## finalize the proteins to analyze
+pData <- pData[1:929,]
+protein_info <- protein_info[1:929,]
+
+protein_info$Gene_Symbol <- gsub("\\;.*","", protein_info$Gene_Symbol) #newly added on 7/16/2024
+```
+
+$~$
+
+### PART A: Proteomic Data Processing
+#### 1) Missing value distributions
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 6}
+# Generate a new mae object
+(met <- create_mae(pData,protein_info,sample_info))
+
+# Visualize missing measurements across samples
+na_heatmap(met, group_factor="Batch", label_colors=c("darkseagreen","dodgerblue","orangered","maroon","purple"))
+```
+
+```{r message=FALSE, warning=FALSE, fig.width = 6, fig.height = 4}
+# Remove sample with too many missing values
+plot(colSums(is.na(pData)))
+idx_rm <- which(colSums(is.na(pData)) > 600) # samples with high missing rates (929 proteins in the panel)
+sample_info <- sample_info[-idx_rm,]
+pData <- pData[,-idx_rm]
+```
+
+$~$
+
+#### 2) Data normalization
+#Big assumption of this is that all means are almost the same across all the samples 
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 6}
+#### ========= Individual Data Normalization ======== ####
+## Refer to Figure 3 of the HarmonizR paper (https://www.nature.com/articles/s41467-022-31007-x)
+
+# 1)log2 normalization
+pData_norm <- log2(pData)
+
+# 2)column median normalization
+medianWithoutNA<-function(x) {
+   median(x[which(!is.na(x))])
+}
+
+pData_norm <- lapply(pData_norm, function(x) x/medianWithoutNA(x))
+pData_norm <- data.frame(pData_norm)
+
+dim(pData) == dim(pData_norm)
+rownames(pData_norm) <- rownames(pData)
+```
+
+$~$
+
+#### 3) Profile the normalized data
+```{r fig.height=6, fig.width=8, message=FALSE, warning=FALSE}
+# Generate a new mae object
+(met <- create_mae(pData_norm,protein_info,sample_info))
+
+# Impute missing values
+(met = knn_impute(met,cutoff=0.25))
+
+# create updated protein_info
+norm_imputed <- assays(met)[["imputed"]]
+
+final_rownames <- rownames(norm_imputed)
+protein_info.new <- protein_info[which(rownames(protein_info) %in% final_rownames), ] ##!!important!!##
+
+# Identify putative outliers
+outlier_heatmap(met, group_factor="Batch",  label_colors=c("darkseagreen","dodgerblue","orangered","maroon","purple"), k=5)
+
+# Box plot
+boxplot(norm_imputed, col = rep(c("darkseagreen","dodgerblue","orangered","maroon","purple"), each = 16), notch = TRUE, main = 'Normalized imputed data', xlab = 'TMT Samples', ylab = 'Normalized Intensity')
+
+# Density plot
+plotDensities(norm_imputed, col = rep(c("darkseagreen","dodgerblue","orangered","maroon","purple"), each = 16), main = 'Normalized imputed data')
+```
+
+$~$
+
+#### 4) Sample PCA plot
+```{r message=FALSE, warning=FALSE, fig.width = 10, fig.height = 8}
+myData <- data.frame(t(norm_imputed))
+
+pca_res <- prcomp(myData, scale. = TRUE)
+
+myData$Biopsy <- sample_info$Biopsy
+myData$Biopsy = factor(myData$Biopsy)
+myData$Batch <- sample_info$Batch
+myData$Batch = factor(myData$Batch)
+
+autoplot(pca_res, data = myData, colour = 'Biopsy', shape = 'Batch', size=3) + geom_text_repel(aes(label=rownames(myData)), size = 3)
+```
+
+$~$
+
+$~$
+
+### PART B: Data harmonization using HarmonizR
+#### 1) Data harmonization 
+```{r message=FALSE, warning=FALSE, fig.width = 6, fig.height = 4}
+library(HarmonizR)
+
+# create a batch_description file
+ID <- rownames(sample_info)
+sample <- c(1:length(ID))
+batch <- gsub("Batch_0", "", sample_info$Batch)
+batch <- as.numeric(batch)
+df <- data.frame(ID, sample, batch)
+write.csv(df, "batch_description.csv", row.names = F)
+
+# create a data file
+pData_norm2 <- pData_norm[final_rownames,]
+write.table(pData_norm2, file='pData_norm.tsv', quote=FALSE, sep='\t', col.names = NA)
+
+
+# run
+currentPath <- getwd()
+data_file <- paste(currentPath, "pData_norm.tsv", sep = "/")
+info_file <- paste(currentPath, "batch_description.csv", sep="/")
+
+#harmonizR(data_file, info_file, algorithm = "Combat", ComBat_mode = 1, plot="samplemeans", output_file = "result_file")
+hData <- harmonizR(data_file, info_file, algorithm = "limma", plot="samplemeans", output_file = "result_file")
+```
+
+$~$
+
+#### 2) Profile the HarmonizRed data
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 6}
+hData <- data.frame(hData) ## NEW FINDING!! : the protein order got shuffled by harmonizR ##
+pInfoData <- protein_info[rownames(hData), ]
+
+# Generate a new mae object
+(met <- create_mae(hData,pInfoData,sample_info))
+
+#na_heatmap(met, group_factor="Batch", #label_colors=c("darkseagreen","dodgerblue","orangered","maroon","purple"))
+
+# Impute missing values
+(met = knn_impute(met,cutoff=0.25)) # match it to that in the previous chunk
+
+# create updated protein_info
+hData_imputed <- assays(met)[["imputed"]]
+
+final_rownames <- rownames(hData_imputed)
+protein_info.new <- pInfoData[which(rownames(pInfoData) %in% final_rownames), ] ## Based on the NEW FINDING, it got updated ##
+
+##protein_info.new <- protein_info[which(rownames(protein_info) %in% final_rownames), ] 
+### NEW FINDING!!: rownames(hData_imputed) & rownames(protein_info.new) are not the same!!! ##
+
+# save harmonized data
+write.csv(hData_imputed, file = "HarmonizR_Proteomics_Data.csv", row.names = T, quote = F)
+write.csv(sample_info, file = "HarmonizR_Sample_Info.csv", row.names = T, quote = F)
+write.csv(protein_info.new, file = "HarmonizR_Protein_Info.csv", row.names = T, quote = F)
+
+# Identify putative outliers
+outlier_heatmap(met, group_factor="Batch", label_colors=c("darkseagreen","dodgerblue","orangered","maroon","purple"), k=5)
+
+
+# Box plot
+boxplot(hData_imputed, col = rep(c("darkseagreen","dodgerblue","orangered","maroon","purple"), each = 16), 
+        notch = TRUE, main = 'HarmonizR imputed data',
+        xlab = 'TMT Samples', ylab = 'Normalized-Harmonized Intensity')
+
+# Density plot
+plotDensities(hData_imputed, col = rep(c("darkseagreen","dodgerblue","orangered","maroon","purple"), each = 16), 
+              main = 'HarmonizR imputed data')
+```
+
+$~$
+
+#### 3) PCA plot of the harmonized data
+```{r message=FALSE, warning=FALSE, fig.width = 10, fig.height = 8}
+myData <- data.frame(t(hData_imputed))
+
+pca_res <- prcomp(myData, scale. = TRUE)
+
+myData$Biopsy <- sample_info$Biopsy
+myData$Biopsy = factor(myData$Biopsy)
+myData$Batch <- sample_info$Batch
+myData$Batch = factor(myData$Batch)
+
+autoplot(pca_res, data = myData, colour = 'Biopsy', shape = 'Batch', size=3) + geom_text_repel(aes(label=rownames(myData)), size = 3)
+```
+
+$~$
+
+$~$
+
+### PART C: Biopsy OM(+) vs. OM(-) comparison after removing post-treatment samples
+#### 1) Remove irrelevant samples
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 5}
+# remove pooled and post-treatment samples
+rm_idx <- which((sample_info$Pathology_Case == "Pooled") | (sample_info$Pathology_Case == "Research Block") | (sample_info$TimePoint == "Post_treat"))
+f_Data <- hData_imputed[,-rm_idx]
+f_sample_info <- sample_info[-rm_idx,]
+```
+
+$~$
+
+#### 2) PCA plot of relevant samples
+```{r message=FALSE, warning=FALSE, fig.width = 10, fig.height = 8}
+myData <- data.frame(t(f_Data))
+
+pca_res <- prcomp(myData, scale. = TRUE)
+
+myData$Biopsy <- f_sample_info$Biopsy
+myData$Biopsy = factor(myData$Biopsy)
+myData$Batch <- f_sample_info$Batch
+myData$Batch = factor(myData$Batch)
+myData$TimePoint <- f_sample_info$TimePoint
+myData$TimePoint = factor(myData$TimePoint)
+
+autoplot(pca_res, data = myData, colour = 'Biopsy', shape = 'TimePoint', size=3) + geom_text_repel(aes(label=rownames(myData)), size = 3)
+```
+
+$~$
+
+#### 2) Group comparison (OM(+) vs. OM(-))
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 5}
+# t-test
+df = genefilter::rowttests(as.matrix(f_Data), fac = factor(f_sample_info$Biopsy, levels = c("OM(+)", "OM(-)")))
+df_stats = data.frame(pval=df$p.value,
+                      adj_pval=p.adjust(df$p.value,method="fdr"),
+                      fold_change=df$dm)
+rownames(df_stats) <- protein_info.new$Accession #rownames(protein_info.new)
+
+## significant proteins
+p_thr <- 0.05
+fc_thr <- 0.01
+idx_sig_pos <- (df_stats$adj_pval < p_thr) & (df_stats$fold_change > fc_thr)
+sig_proteins_pos <- rownames(df_stats[idx_sig_pos,])
+sig_proteins_pos
+
+idx_sig_neg <- (df_stats$adj_pval < p_thr) & (df_stats$fold_change < -fc_thr)
+sig_proteins_neg <- rownames(df_stats[idx_sig_neg,])
+sig_proteins_neg
+
+df_stats$significance <- "N.S."
+df_stats$significance[idx_sig_pos] <- "Positive"
+df_stats$significance[idx_sig_neg] <- "Negative"
+
+idx_sig <- (idx_sig_pos | idx_sig_neg)
+df_stats$sig_label <- ""
+df_stats$sig_label[idx_sig] <- protein_info.new$Gene_Symbol[idx_sig]
+
+ggplot(data=df_stats, aes(x=fold_change, y=-log10(adj_pval), col=significance, label=sig_label)) + 
+    geom_point() + 
+    theme_minimal() +
+    geom_text_repel() + 
+    scale_color_manual(values=c("gray", "blue", "red")) +
+    geom_vline(xintercept=c(-fc_thr, fc_thr), col="black", linetype="longdash") +
+    geom_hline(yintercept=-log10(p_thr), col="black", linetype="longdash")
+```
+
+$~$
+
+#### 3) Pathway Enrichment analysis for all significant proteins
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 10}
+sig_proteins <- c(sig_proteins_pos, sig_proteins_neg)
+
+## Generate a Uniprot ID to ENSEMBL_ID / Gene_Symbol conversion table
+library(biomaRt)
+ensembl = useMart("ensembl",dataset="hsapiens_gene_ensembl")
+tb_id <- getBM(attributes=c("uniprot_gn_id","ensembl_gene_id","entrezgene_id", "external_gene_name"), 
+               filters = 'uniprot_gn_id', values = sig_proteins, mart = ensembl)
+df_stats_sig <- df_stats[df_stats$significance!="N.S.",-c(4,5)]
+tb_id <- merge(tb_id, df_stats_sig, by.x="uniprot_gn_id", by.y="row.names")
+tb_id <- tb_id[order(-tb_id$fold_change),]
+tb_id <- tb_id[!duplicated(tb_id$uniprot_gn_id),]
+kable(tb_id) %>% kable_styling("striped", full_width = F)
+
+sig_genes <- unique(tb_id$entrezgene_id)
+sig_genes <- sig_genes[!is.na(sig_genes)]
+
+## GO analysis for significant genes
+library(limma)
+GO_sig_genes <- goana(as.vector(sig_genes), species="Hs", FDR=0.05)
+GO_sig_genes_sub <- GO_sig_genes[GO_sig_genes$P.DE < 0.01,]
+kable(topGO(GO_sig_genes_sub, ontology = c("BP"), n=100)) %>% kable_styling("striped", full_width = F)
+
+## KEGG analysis for significant genes
+KEGG_sig_genes <- kegga(as.vector(sig_genes), species="Hs", FDR=0.05)
+KEGG_sig_genes_sub <- KEGG_sig_genes[KEGG_sig_genes$P.DE < 0.05,]
+kable(topKEGG(KEGG_sig_genes_sub)) %>% kable_styling("striped", full_width = F)
+
+## Reactome pathway analysis
+library(ReactomePA)
+Reactome_sig_genes <- enrichPathway(gene=as.vector(sig_genes),organism="human", pvalueCutoff=0.05, readable=T)
+df_Reactome_sig_genes <- data.frame(Reactome_sig_genes)
+df_Reactome_sig_genes <- df_Reactome_sig_genes[order(df_Reactome_sig_genes$pvalue),]
+kable(df_Reactome_sig_genes) %>% kable_styling("striped", full_width = F) %>% scroll_box(width = "100%", height = "500px")
+```
+
+$~$
+
+#### 3) Pathway Enrichment analysis for significantly abudant proteins in the OM(+) samples
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 10}
+### [Hands-on Practice] ###
+
+# Write your code here!
+
+```
+
+$~$
+
+$~$
+
+### PART D: PLS-DA analysis
+#### 1) Run PLS-DA analysis
+```{r message=FALSE, warning=FALSE, fig.width = 6, fig.height = 6}
+library(mixOmics)
+X <- t(f_Data)
+Y <- factor(f_sample_info$Biopsy, levels = c("OM(+)", "OM(-)"))
+MyResult.splsda <- mixOmics::splsda(X, Y, keepX = c(50,50)) # keepX, the number of variables to keep in X-loadings
+
+# PLS-DA result plot
+plotIndiv(MyResult.splsda)
+```
+
+$~$
+
+#### 2) Important vairables identified by VIP scores
+```{r message=FALSE, warning=FALSE, fig.width = 7, fig.height = 8}
+## Loadings of variables selected for each component (here, 50 variables onto Component-1)
+#plotLoadings(MyResult.splsda, contrib = 'max', method = 'mean')
+
+# significant proteins with VIP score > 1.0
+VIPscore <- vip(MyResult.splsda) # !!keepX greatly affects the number variable having high VIP scores!!
+sig_proteins <- protein_info.new$Accession[VIPscore[,1] > 0]
+sig_proteins2 <- rownames(VIPscore)[VIPscore[,1] > 0]
+sig_proteins
+```
+
+$~$
+
+#### 3) Box plots of immportant vairables/proteins 
+```{r message=FALSE, warning=FALSE, fig.width=10, fig.height=18}
+idx_sig <- which(VIPscore[,1] > 0)
+
+tb_PLSDA_sig <- data.frame(t(f_Data[idx_sig,]))
+colnames(tb_PLSDA_sig) <- sig_proteins
+tb_PLSDA_sig$Group <- f_sample_info$Biopsy
+
+tb_PLSDA_sig_viz <- melt(tb_PLSDA_sig, id.vars=c("Group"))
+
+# Box plots for the important proteins
+ggplot(tb_PLSDA_sig_viz, aes(x=Group, y=value)) + geom_boxplot(aes(fill = Group)) + 
+  geom_jitter() + theme(legend.position = "none") + labs(x="", y="Normalized") + facet_wrap(~variable, scales = 'free_y', ncol = 5)
+```
+
+$~$
+
+#### 4) PLS-DA loading visualization
+```{r message=FALSE, warning=FALSE, fig.width = 7, fig.height = 8}
+## Generate a Uniprot ID to ENSEMBL_ID / Gene_Symbol conversion table
+#library(biomaRt)
+#ensembl = useMart("ensembl",dataset="hsapiens_gene_ensembl")
+tb_id <- getBM(attributes=c("uniprot_gn_id","ensembl_gene_id","entrezgene_id", "external_gene_name"), 
+               filters = 'uniprot_gn_id', values = sig_proteins, mart = ensembl)
+tb_id <- tb_id[!duplicated(tb_id$uniprot_gn_id),]
+
+## Create df_loading data.frame
+n_loading <- length(sig_proteins)
+val_loading <- MyResult.splsda$loadings$X[rownames(MyResult.splsda$loadings$X) %in% sig_proteins2]
+
+df_loading <- data.frame(value=val_loading[c(1:n_loading)])
+rownames(df_loading) <- sig_proteins
+
+df_loading <- merge(df_loading, tb_id[,c(1,4)], by.x="row.names", by.y="uniprot_gn_id", all.x=T)
+
+df_loading$genotype <- ifelse(df_loading$value > 0, "OM(+)", "OM(-)")
+df_loading$genotype <- factor(df_loading$genotype, levels = c("OM(+)", "OM(-)"))
+
+df_loading$label <- paste(df_loading$Row.names, df_loading$external_gene_name, sep = " : ")
+
+df_loading <- df_loading %>% arrange(desc(abs(value)))
+names(df_loading)[1] <- "uniprot_gn_id"
+df_loading$uniprot_gn_id <- factor(df_loading$uniprot_gn_id, levels = df_loading$uniprot_gn_id)
+
+## Plot a horizontal bar plot
+p <- ggplot(df_loading, aes(x=uniprot_gn_id, y=value, label=value)) +
+  geom_bar(stat='identity', aes(fill=genotype), width=0.8) +
+  scale_fill_manual(name="Biopsy",
+                    labels = c("OM(+)", "OM(-)"),
+                    values = c("OM(+)"="#F8766D", "OM(-)"="#00A9FF")) +
+   labs(title= "PLS-DA Loadings", x="", y="") +
+   coord_flip()
+
+p + 
+  theme(panel.background = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        axis.line.x = element_line(colour = "black", size = 0.5, linetype = "solid")
+        ) + 
+  scale_x_discrete(labels=df_loading$label)
+```
+
+$~$
+
+#### 5) Pathway Enrichment analysis for the important proteins
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 10}
+sig_genes <- unique(tb_id$entrezgene_id)
+sig_genes <- sig_genes[!is.na(sig_genes)]
+
+## GO analysis for significant genes
+#library(limma)
+GO_sig_genes <- goana(as.vector(sig_genes), species="Hs", FDR=0.05)
+GO_sig_genes_sub <- GO_sig_genes[GO_sig_genes$P.DE < 0.01,]
+kable(topGO(GO_sig_genes_sub, ontology = c("BP"), n=100)) %>% kable_styling("striped", full_width = F)
+
+## KEGG analysis for significant genes
+KEGG_sig_genes <- kegga(as.vector(sig_genes), species="Hs", FDR=0.05)
+KEGG_sig_genes_sub <- KEGG_sig_genes[KEGG_sig_genes$P.DE < 0.05,]
+kable(topKEGG(KEGG_sig_genes_sub)) %>% kable_styling("striped", full_width = F)
+
+## Reactome pathway analysis
+#library(ReactomePA)
+Reactome_sig_genes <- enrichPathway(gene=as.vector(sig_genes),organism="human",pvalueCutoff=0.05, readable=T)
+df_Reactome_sig_genes <- data.frame(Reactome_sig_genes)
+df_Reactome_sig_genes <- df_Reactome_sig_genes[order(df_Reactome_sig_genes$pvalue),]
+kable(df_Reactome_sig_genes) %>% kable_styling("striped", full_width = T) %>% scroll_box(width = "100%", height = "500px")
+```
+
+$~$
+
+#### 6) Pathway Enrichment analysis for proteins with positive loadings
+```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 10}
+### [Hands-on Practice] ###
+
+# Write your code here!
+
+```
+
+$~$
+
+$~$
+
+### ==End of Report==

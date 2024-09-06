@@ -31,7 +31,7 @@ conflict_prefer("filter", "dplyr")
 
 ```{r}
 knowingYourData_Filepath <- "C:/Users/S438187/Desktop/Wu Lab/Other Projects/Comp Bio/UTSWNanocourse2024_Data Science in R_student/data/cardio_small.csv"
-cardio <- read_csv(knowingYourData_Filepath)
+card <- read_delim(knowingYourData_Filepath, delim = ";")
 ```
 
 ### Ex 1.2: Get familiar with your dataset
@@ -50,19 +50,23 @@ cardio <- read_csv(knowingYourData_Filepath)
 
 ```{r}
 # Look at the structure of your dataset
+card %>% str()
 
-#Look at the head of the dataset
-cardio %>% head()
+#Look at the frist 7 values of the dataset
+card %>% head(7)
 
 #Look at last 5 values
+card %>% tail(5)
+
 
 #Look at number, size, and data type of each column
 
+
 # Print the summary statistics
-cardio %>% summary()
+card %>% summary()
 
 # Check for missing values:
-print(any(is.na(cardio)))
+print(any(is.na(card)))
 #No missing values
 
 ```
@@ -77,12 +81,15 @@ Bonus: Add color based on one of your categorical variables
 (This dataset is relatively big, so don't be surprised if this takes a minute or two)
 
 ```{r, fig.height=18, fig.width = 18, message = FALSE, warning = FALSE}
-
+card%>%
+  ggpairs(aes(color= as_factor(cholesterol)), progress = FALSE)
+#setting color to numerical value will throw up an error, because lots of different weights and gets overwhelmed assigning new color to each value (i.e. weight)
 ```
 
 
 ```{r, fig.height=18, fig.width = 18, message = FALSE, warning = FALSE}
-
+cardio%>%
+  ggcorr()
 ```
 
 ### Ex 1.4: Validating your columns
@@ -94,6 +101,40 @@ Bonus: Add color based on one of your categorical variables
 3) Using techniques in Ex1.2, double-check to make sure your changes make sense.
 
 ```{r}
+#1 Fix your datatypes if any columns have inappropriate data types
+card <- card%>% transform(
+  gender= as.factor(gender),
+  cholesterol = as.factor(cholesterol),
+  gluc= as.factor(gluc),
+  smoke = as.factor(smoke),
+  alco= as.factor(alco),
+  active= as.factor(active),
+  cardio= as.factor(cardio)
+  ) %>%
+  select(-age_mo)
+
+card %>% str()
+  
+#2 Drop duplicate features if any are present in your dataset
+unique.card <- card[!duplicated(card),]
+
+#3 Using techniques in Ex1.2, double-check to make sure your changes make sense
+# Look at the structure of your dataset
+unique.card %>% str()
+
+#Look at the head of the dataset
+unique.card %>% head()
+
+#Look at last 5 values
+
+#Look at number, size, and data type of each column
+
+
+# Print the summary statistics
+unique.card %>% summary()
+
+# Check for missing values:
+print(any(is.na(unique.card)))
 
 ```
 
@@ -111,7 +152,8 @@ After taking a first look at your data, you likely have realized that there may 
 - Hint: geom_violin() and geom_jitter() may prove useful
 
 ```{r}
-
+card%>%
+  
 ```
 
 
@@ -126,7 +168,7 @@ Hint:
 2) Check how your filter impacted the dataset size using techniques in Ex1.2 
 
 ```{r}
-
+#even though bands every value of 5, still continue to treat it as continuous
 ```
 
 ### Ex 2.3: Taking a closer look at age

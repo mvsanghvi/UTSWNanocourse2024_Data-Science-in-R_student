@@ -30,7 +30,8 @@ conflict_prefer("filter", "dplyr")
 2) Read in the cardio dataset into your R session
 
 ```{r}
-
+knowingYourData_Filepath <- "C:/Users/S438187/Desktop/Wu Lab/Other Projects/Comp Bio/UTSWNanocourse2024_Data Science in R_student/data/cardio_small.csv"
+cardio <- read_csv(knowingYourData_Filepath)
 ```
 
 ### Ex 1.2: Get familiar with your dataset
@@ -48,6 +49,21 @@ conflict_prefer("filter", "dplyr")
 5) Check for missing values
 
 ```{r}
+# Look at the structure of your dataset
+
+#Look at the head of the dataset
+cardio %>% head()
+
+#Look at last 5 values
+
+#Look at number, size, and data type of each column
+
+# Print the summary statistics
+cardio %>% summary()
+
+# Check for missing values:
+print(any(is.na(cardio)))
+#No missing values
 
 ```
 

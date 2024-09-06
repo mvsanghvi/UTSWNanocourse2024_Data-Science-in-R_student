@@ -18,6 +18,7 @@ sample16,DEMO-016,Abundance_1_15,DEMO-0051,Research Block,,OM(-),Batch_01,No,Una
 sample17,DEMO-017,Abundance_2_0,DEMO-Pooled_2,Pooled,,Pooled,Batch_02,No,Unavailable
 sample18,DEMO-018,Abundance_2_1,DEMO-0015,S-18-0015504,A1,OM(+),Batch_02,Yes,Pre_treat
 sample19,DEMO-019,Abundance_2_2,DEMO-0015,Research Block,,OM(-),Batch_02,Yes,Post_treat
+sample20,DEMO-020,Abundance_2_3,DEMO-0019,S-18-0020483,A1,OM(+),Batch_02,Yes,Pre_treat
 sample21,DEMO-021,Abundance_2_4,DEMO-0019,Research Block,,OM(-),Batch_02,Yes,Post_treat
 sample22,DEMO-022,Abundance_2_5,DEMO-0020,S-18-0021607,B1,OM(+),Batch_02,Yes,Pre_treat
 sample23,DEMO-023,Abundance_2_6,DEMO-0020,Research Block,,OM(-),Batch_02,Yes,Post_treat

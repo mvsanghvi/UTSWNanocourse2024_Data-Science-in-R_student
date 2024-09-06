@@ -385,7 +385,7 @@ df_outlier %>%
 
 # Hypothesis testing
 
-We will start with the student's t-test.
+We will start with the student's 1 sample t-test.
 
 ## Dataset 1: df_se
 ```{r}
@@ -411,6 +411,7 @@ ggqqplot(df_se, "Sepal.Length")
 ![1 Var Continuous Flowchart](./images/cont1varFlowChart.png)
 
 - Is my (normally distributed) group different from a normally distributed value group with a specified mean?
+Changing scaling (which centers them around 0), so mu needs to be based on whether you have scaled or not. 
 
 ```{r}
 t.test(df_se$Sepal.Length, mu = 3)
@@ -546,6 +547,7 @@ t.test(df_se_paired$Sepal.Length, df_se_paired$Sepal.Length.Winter, paired = TRU
 
 ### What happens if you don't pair up your data?
 #### (THIS IS THE WRONG WAY)
+Have to set variance is equal. By default, believes variance is NOT equal
 ```{r}
 # INCORRECT way:
 t.test(df_se_paired$Sepal.Length, df_se_paired$Sepal.Length.Winter, var.equal = TRUE)
@@ -558,6 +560,8 @@ t.test(df_se_paired$Sepal.Length, df_se_paired$Sepal.Length.Winter, var.equal = 
 We already explored this dataset so let's jump right into the testing:
 
 ### Check if equal Variance
+Still need to check if homogeneous differences
+Check for equal variance
 ```{r}
 df %>% 
   ggplot(aes(x = Sepal.Width, fill = Species)) + 
@@ -566,6 +570,7 @@ df %>%
 
 df %>% 
   levene_test(Sepal.Width ~ Species)
+#not statistically sig, so can do one test
 
 ```
 
@@ -577,6 +582,8 @@ df %>%
 # Pairwise Comparisons: Which Species have significantly different Sepal.Width
 df %>% 
   tukey_hsd(Sepal.Width ~ Species)
+
+#p-adj= adjusted p-value. Bc adjusting for false discovery rate
 ```
 
 # Welch hypothesis tests
@@ -597,6 +604,7 @@ df %>%
 ```
 
 ## Welch - Two sample t-test:
+default assumption that variance is NOT equal
 
 ```{r}
 t.test(df_se$Sepal.Length, df_ve$Sepal.Length)
@@ -924,7 +932,7 @@ df_pairedWilcox %>%
 ```
 # Friedmann's 
 "Non-parametric repeated measures ANOVA"
-
+Non normally distributed data
 
 ```{r, fig.width = 15, fig.height= 7}
 # Overview dataset

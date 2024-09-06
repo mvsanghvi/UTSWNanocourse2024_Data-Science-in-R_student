@@ -1,0 +1,81 @@
+SID	AID	Subject_ID	Pathology_Case	Block	Biopsy	Batch	Matched	TimePoint
+DEMO-001	Abundance_1_0	DEMO-Pooled_1	Pooled		Pooled	Batch_01	No	
+DEMO-002	Abundance_1_1	DEMO-0001	S-18-0002100	A1	OM(-)	Batch_01	No	
+DEMO-003	Abundance_1_2	DEMO-0001	S-18-0002100	B1	OM(-)	Batch_01	Yes	Pre_treat
+DEMO-004	Abundance_1_3	DEMO-0001	Research Block		OM(-)	Batch_01	Yes	Post_treat
+DEMO-005	Abundance_1_4	DEMO-0003	S-18-0005603	B1	OM(+)	Batch_01	Yes	Pre_treat
+DEMO-006	Abundance_1_5	DEMO-0003	Research Block		OM(-)	Batch_01	Yes	Post_treat
+DEMO-007	Abundance_1_6	DEMO-0004	S-18-0005736	A5	OM(-)	Batch_01	Yes	Pre_treat
+DEMO-008	Abundance_1_7	DEMO-0004	Research Block		OM(-)	Batch_01	Yes	Post_treat
+DEMO-009	Abundance_1_8	DEMO-0008	S-18-0009913	A2	OM(+)	Batch_01	Yes	Pre_treat
+DEMO-010	Abundance_1_9	DEMO-0008	Research Block	1	OM(-)	Batch_01	Yes	Post_treat
+DEMO-011	Abundance_1_10	DEMO-0008	Research Block	2	OM(-)	Batch_01	No	
+DEMO-012	Abundance_1_11	DEMO-0012	S-18-0013107	A1	OM(+)	Batch_01	Yes	Pre_treat
+DEMO-013	Abundance_1_12	DEMO-0012	Research Block		OM(-)	Batch_01	Yes	Post_treat
+DEMO-014	Abundance_1_13	DEMO-0014	S-18-0013092	A1	OM(+)	Batch_01	Yes	Pre_treat
+DEMO-015	Abundance_1_14	DEMO-0014	Research Block		OM(-)	Batch_01	Yes	Post_treat
+DEMO-016	Abundance_1_15	DEMO-0051	Research Block		OM(-)	Batch_01	No	
+DEMO-017	Abundance_2_0	DEMO-Pooled_2	Pooled		Pooled	Batch_02	No	
+DEMO-018	Abundance_2_1	DEMO-0015	S-18-0015504	A1	OM(+)	Batch_02	Yes	Pre_treat
+DEMO-019	Abundance_2_2	DEMO-0015	Research Block		OM(-)	Batch_02	Yes	Post_treat
+DEMO-020	Abundance_2_3	DEMO-0019	S-18-0020483	A1	OM(+)	Batch_02	Yes	Pre_treat
+DEMO-021	Abundance_2_4	DEMO-0019	Research Block		OM(-)	Batch_02	Yes	Post_treat
+DEMO-022	Abundance_2_5	DEMO-0020	S-18-0021607	B1	OM(+)	Batch_02	Yes	Pre_treat
+DEMO-023	Abundance_2_6	DEMO-0020	Research Block		OM(-)	Batch_02	Yes	Post_treat
+DEMO-024	Abundance_2_7	DEMO-0024	S-18-0023334	A1	OM(+)	Batch_02	Yes	Pre_treat
+DEMO-025	Abundance_2_8	DEMO-0024	Research Block		OM(-)	Batch_02	Yes	Post_treat
+DEMO-026	Abundance_2_9	DEMO-0028	S-18-0029691	A1	OM(+)	Batch_02	Yes	Pre_treat
+DEMO-027	Abundance_2_10	DEMO-0028	Research Block		OM(-)	Batch_02	Yes	Post_treat
+DEMO-028	Abundance_2_11	DEMO-0033	S-19-0015548	A1	OM(+)	Batch_02	Yes	Pre_treat
+DEMO-029	Abundance_2_12	DEMO-0033	Research Block		OM(-)	Batch_02	Yes	Post_treat
+DEMO-030	Abundance_2_13	DEMO-0037	S-19-27310	A1	OM(-)	Batch_02	Yes	Pre_treat
+DEMO-031	Abundance_2_14	DEMO-0037	S-19-27310	B1	OM(-)	Batch_02	No	
+DEMO-032	Abundance_2_15	DEMO-0037	Research Block		OM(-)	Batch_02	Yes	Post_treat
+DEMO-033	Abundance_3_0	DEMO-Pooled_3	Pooled		Pooled	Batch_03	No	
+DEMO-034	Abundance_3_1	DEMO-0038	S-19-28026	A1	OM(+)	Batch_03	No	
+DEMO-035	Abundance_3_2	DEMO-0038	Research Block		OM(+)	Batch_03	No	
+DEMO-036	Abundance_3_3	DEMO-0039	S-19-28259	A1	OM(+)	Batch_03	Yes	Pre_treat
+DEMO-037	Abundance_3_4	DEMO-0039	Research Block		OM(+)	Batch_03	Yes	Post_treat
+DEMO-038	Abundance_3_5	DEMO-0041	S-20-01243	A1	OM(+)	Batch_03	Yes	Pre_treat
+DEMO-039	Abundance_3_6	DEMO-0041	Research Block		OM(-)	Batch_03	Yes	Post_treat
+DEMO-040	Abundance_3_7	DEMO-0043	S-20-01312	A1	OM(+)	Batch_03	Yes	Pre_treat
+DEMO-041	Abundance_3_8	DEMO-0043	Research Block		OM(+)	Batch_03	Yes	Post_treat
+DEMO-042	Abundance_3_9	DEMO-0050	S-20-19489	A1	OM(+)	Batch_03	Yes	Pre_treat
+DEMO-043	Abundance_3_10	DEMO-0050	Research Block		OM(-)	Batch_03	Yes	Post_treat
+DEMO-044	Abundance_3_11	DEMO-0055	S-21-02056	A1	OM(-)	Batch_03	Yes	Pre_treat
+DEMO-045	Abundance_3_12	DEMO-0055	S-21-05091	A1	OM(+)	Batch_03	Yes	Post_treat
+DEMO-046	Abundance_3_13	DEMO-0056	SU21-06349	A1	OM(-)	Batch_03	No	
+DEMO-047	Abundance_3_14	DEMO-0056	Research Block	A1	OM(+)	Batch_03	No	
+DEMO-048	Abundance_3_15	DEMO-0056	Research Block	B1	OM(+)	Batch_03	No	
+DEMO-049	Abundance_4_0	DEMO-Pooled_4	Pooled		Pooled	Batch_04	No	
+DEMO-050	Abundance_4_1	DEMO-0002	S-18-0005067	A2	OM(+)	Batch_04	No	
+DEMO-051	Abundance_4_2	DEMO-0002	S-18-0005067	A3	OM(+)	Batch_04	No	
+DEMO-052	Abundance_4_3	DEMO-0005	S-18-0007771	A1	OM(+)	Batch_04	No	
+DEMO-053	Abundance_4_4	DEMO-0005	S-18-0007771	B1	OM(+)	Batch_04	No	
+DEMO-054	Abundance_4_5	DEMO-0006	S-18-0008472	A1	OM(+)	Batch_04	No	
+DEMO-055	Abundance_4_6	DEMO-0007	S-18-0008689	A1	OM(-)	Batch_04	No	
+DEMO-056	Abundance_4_7	DEMO-0007	S-18-0008689	B1	OM(-)	Batch_04	No	
+DEMO-057	Abundance_4_8	DEMO-0009	S-18-0010211	B1	OM(-)	Batch_04	No	
+DEMO-058	Abundance_4_9	DEMO-0010	S-18-0011279	A1	OM(-)	Batch_04	No	
+DEMO-059	Abundance_4_10	DEMO-0016	S-18-0015797	A1	OM(-)	Batch_04	No	
+DEMO-060	Abundance_4_11	DEMO-0021	S-18-0021350	A1	OM(-)	Batch_04	No	
+DEMO-061	Abundance_4_12	DEMO-0022	S-18-22477	B1	OM(+)	Batch_04	No	
+DEMO-062	Abundance_4_13	DEMO-0023	S-18-0022610	A1	OM(-)	Batch_04	No	
+DEMO-063	Abundance_4_14	DEMO-0026	S-18-0023310	A1	OM(+)	Batch_04	No	
+DEMO-064	Abundance_4_15	DEMO-0026	S-18-0023310	A2	OM(+)	Batch_04	No	
+DEMO-065	Abundance_5_0	DEMO-Pooled_5	Pooled		Pooled	Batch_05	No	
+DEMO-066	Abundance_5_1	DEMO-0027	S-18-0029641	A1	OM(-)	Batch_05	No	
+DEMO-067	Abundance_5_2	DEMO-0034	S-19-0015827	A1	OM(-)	Batch_05	No	
+DEMO-068	Abundance_5_3	DEMO-0035	S-19-0016145	A1	OM(+)	Batch_05	No	
+DEMO-069	Abundance_5_4	DEMO-0036	S-19-27235	A1	OM(-)	Batch_05	No	
+DEMO-070	Abundance_5_5	DEMO-0040	S-19-29524	A1	OM(+)	Batch_05	No	
+DEMO-071	Abundance_5_6	DEMO-0040	S-19-29524	A2	OM(+)	Batch_05	No	
+DEMO-072	Abundance_5_7	DEMO-0042	S-20-01075	A1	OM(+)	Batch_05	No	
+DEMO-073	Abundance_5_8	DEMO-0043	S-20-01312	A1	OM(+)	Batch_05	No	
+DEMO-074	Abundance_5_9	DEMO-0044	S-20-01539	A2	OM(+)	Batch_05	No	
+DEMO-075	Abundance_5_10	DEMO-0046	S-20-01709	A1	OM(+)	Batch_05	No	
+DEMO-076	Abundance_5_11	DEMO-0047	S-20-05325	A1	OM(-)	Batch_05	No	
+DEMO-077	Abundance_5_12	DEMO-0048	S-20-05497	A1	OM(+)	Batch_05	No	
+DEMO-078	Abundance_5_13	DEMO-0052	SU20-25307	A1	OM(-)	Batch_05	No	
+DEMO-079	Abundance_5_14	DEMO-0053	SU20-26788	A1	OM(+)	Batch_05	No	
+DEMO-080	Abundance_5_15	DEMO-0054	SU21-01506	A1	OM(+)	Batch_05	No	

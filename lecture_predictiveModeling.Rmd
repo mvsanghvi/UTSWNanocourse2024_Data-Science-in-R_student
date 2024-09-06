@@ -861,6 +861,7 @@ df_test <- test_X %>% mutate(Survived = test_y)
 
 ## Method 1:
 Want about ~80% in training for ~20-30% in outside set
+Very fast with only 500 trees
 ```{r class.source = 'fold-show'}
 train_X %>% str()
 train_y %>% str()
@@ -873,17 +874,6 @@ rfClassifier
 y_pred_train <- predict(rfClassifier)
 y_pred_test <- predict(rfClassifier, newdata = test_X)
 ```
-
-## Method 2: 
-Very fast with only 500 trees
-```{r class.source = 'fold-show'}
-df_train %>% str()
-
-rfClassifier <- randomForest(Survived ~ ., data = df_train, ntree = 500) 
-rfClassifier
-y_pred_train <- predict(rfClassifier)
-y_pred_test <- predict(rfClassifier, newdata = test_X)
-```
 OOB= out of bag (estimated error rate). On average, if picked random tree, how likely is it wrong
 Column= Predicted Value
 Row= True value
@@ -892,6 +882,18 @@ Row= True value
 10= False Negative
 11= Predicted they would not survive, and they didn't
 Want 00 and 11 values high, because means you predicted well
+
+## Method 2: 
+
+```{r class.source = 'fold-show'}
+df_train %>% str()
+
+rfClassifier <- randomForest(Survived ~ ., data = df_train, ntree = 500) 
+rfClassifier
+y_pred_train <- predict(rfClassifier)
+y_pred_test <- predict(rfClassifier, newdata = test_X)
+```
+
 # Model Performance
 ```{r}
 rfClassifier

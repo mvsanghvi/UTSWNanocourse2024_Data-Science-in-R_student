@@ -912,7 +912,7 @@ confusionMatTest
 ```
 If not a lot of variability in error chart, probably need more trees
 High accuracy doesn't mean much if no info rate is higher and high p-value
-Two metrix to look at for predictive model
+Two metrics to look at for predictive model
 1) F1 score (combines sensitivity and specificity)
 2) Balanced accuracy
 Accuracy isn't really looked at

@@ -329,16 +329,29 @@ Reactome_sig_genes <- enrichPathway(gene=as.vector(sig_genes),organism="human", 
 df_Reactome_sig_genes <- data.frame(Reactome_sig_genes)
 df_Reactome_sig_genes <- df_Reactome_sig_genes[order(df_Reactome_sig_genes$pvalue),]
 kable(df_Reactome_sig_genes) %>% kable_styling("striped", full_width = F) %>% scroll_box(width = "100%", height = "500px")
+#Geo, keg, and Reactome are 3 different databases
 ```
+
 
 $~$
 
-#### 3) Pathway Enrichment analysis for significantly abudant proteins in the OM(+) samples
+#### 3) Pathway Enrichment analysis for significantly abundant proteins in the OM(+) samples
 ```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 10}
 ### [Hands-on Practice] ###
 
 # Write your code here!
+sig_proteins <- c(sig_proteins_pos)
 
+## Generate a Uniprot ID to ENSEMBL_ID / Gene_Symbol conversion table
+library(biomaRt)
+ensembl = useMart("ensembl",dataset="hsapiens_gene_ensembl")
+tb_id <- getBM(attributes=c("uniprot_gn_id","ensembl_gene_id","entrezgene_id", "external_gene_name"), 
+               filters = 'uniprot_gn_id', values = sig_proteins, mart = ensembl)
+df_stats_sig <- df_stats[df_stats$significance!="N.S.",-c(4,5)]
+tb_id <- merge(tb_id, df_stats_sig, by.x="uniprot_gn_id", by.y="row.names")
+tb_id <- tb_id[order(-tb_id$fold_change),]
+tb_id <- tb_id[!duplicated(tb_id$uniprot_gn_id),]
+kable(tb_id) %>% kable_styling("striped", full_width = F)
 ```
 
 $~$
@@ -467,7 +480,18 @@ $~$
 ### [Hands-on Practice] ###
 
 # Write your code here!
+sig_proteins <- c(df_loading$value > 0)
 
+## Generate a Uniprot ID to ENSEMBL_ID / Gene_Symbol conversion table
+library(biomaRt)
+ensembl = useMart("ensembl",dataset="hsapiens_gene_ensembl")
+tb_id <- getBM(attributes=c("uniprot_gn_id","ensembl_gene_id","entrezgene_id", "external_gene_name"), 
+               filters = 'uniprot_gn_id', values = sig_proteins, mart = ensembl)
+df_stats_sig <- df_stats[df_stats$significance!="N.S.",-c(4,5)]
+tb_id <- merge(tb_id, df_stats_sig, by.x="uniprot_gn_id", by.y="row.names")
+tb_id <- tb_id[order(-tb_id$fold_change),]
+tb_id <- tb_id[!duplicated(tb_id$uniprot_gn_id),]
+kable(tb_id) %>% kable_styling("striped", full_width = F)
 ```
 
 $~$

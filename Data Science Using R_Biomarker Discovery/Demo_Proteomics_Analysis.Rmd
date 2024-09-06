@@ -70,7 +70,7 @@ pData <- pData[,-idx_rm]
 $~$
 
 #### 2) Data normalization
-#Big assumption of this is that all means are almost the same across all the samples 
+#Big assumption of this is that all means are almost the same across all the samples
 ```{r message=FALSE, warning=FALSE, fig.width = 8, fig.height = 6}
 #### ========= Individual Data Normalization ======== ####
 ## Refer to Figure 3 of the HarmonizR paper (https://www.nature.com/articles/s41467-022-31007-x)

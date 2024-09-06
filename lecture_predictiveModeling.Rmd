@@ -760,6 +760,11 @@ Should you scale your data before or after train-test splitting?
 
 Overall, feature leakage is a tricky problem because it is not always obvious when it is occurring. It is up to *you* to ensure your dataset is void of leaky features! 
 
+Want to try 1 of 3 things before moving to deep learning
+1) Linear regression model
+2) Random Forests
+3) 
+
 # Random Forests
 
 We're almost there! After painstakingly preparing our dataset we are finally ready to begin talking about our predictive model of choice: the random forest.
@@ -855,6 +860,7 @@ df_test <- test_X %>% mutate(Survived = test_y)
 ```
 
 ## Method 1:
+Want about ~80% in training for ~20-30% in outside set
 ```{r class.source = 'fold-show'}
 train_X %>% str()
 train_y %>% str()

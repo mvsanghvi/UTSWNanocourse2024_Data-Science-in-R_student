@@ -200,9 +200,10 @@ https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-p
 ![bpClassPlot](./images/cvEx_2pt4.png)
 
 1) What (if anything) is odd/surprising about this plot?
+People have higher low pressure values than their high pressure values
 
 2) What (if anything) can you do to fix it?
-
+Filter it out
 
 ### Ex 2.5: Apply what you've learned! 
 
@@ -237,9 +238,25 @@ Apply what you've learned to clean height and weight!
 1) Split your dataset into a training and testing set
 
 Bonus: Can you recall why this is important?
+Overfitting. Set aside data to exclusively test data after training
 
 ```{r}
+regDF <- titanic_train %>% 
+  as_tibble() %>% 
+  select(-Name, -Cabin, -Ticket) %>%
+  filter(Embarked != "") %>% 
+  transform( 
+    Survived = as.factor(Survived),
+    Pclass = as.factor(Pclass),
+    Sex = as.factor(Sex),
+    Embarked = as.factor(Embarked)
+  ) %>% 
+  drop_na()
 
+train <- regDF %>% dplyr::sample_frac(0.80)
+test  <- dplyr::anti_join(regDF, train, by = 'PassengerId')
+
+train %>% str()
 
 ```
 
@@ -248,8 +265,10 @@ Bonus: Can you recall why this is important?
 1) Subset your dataset to only features you think will be useful for the predictive model
 
 2) Scale your continuous variables
+Different variables have different scales so are easier to compare
 
-3) Do we scale our continous variables before or after splitting into training and test sets? Why?
+3) Do we scale our continous variables before or after splitting into training and test sets? Why? 
+After. If done before, test set has knowledge of previous information and mean (feature leakage)
 
 ```{r}
 

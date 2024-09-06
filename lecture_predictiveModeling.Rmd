@@ -875,6 +875,7 @@ y_pred_test <- predict(rfClassifier, newdata = test_X)
 ```
 
 ## Method 2: 
+Very fast with only 500 trees
 ```{r class.source = 'fold-show'}
 df_train %>% str()
 
@@ -883,7 +884,14 @@ rfClassifier
 y_pred_train <- predict(rfClassifier)
 y_pred_test <- predict(rfClassifier, newdata = test_X)
 ```
-
+OOB= out of bag (estimated error rate). On average, if picked random tree, how likely is it wrong
+Column= Predicted Value
+Row= True value
+00= Predicted they would survive, and they did
+01= False Positive
+10= False Negative
+11= Predicted they would not survive, and they didn't
+Want 00 and 11 values high, because means you predicted well
 # Model Performance
 ```{r}
 rfClassifier
